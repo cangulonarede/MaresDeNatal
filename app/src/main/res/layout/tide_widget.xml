@@ -62,10 +62,11 @@
                 android:lineSpacingExtra="4dp"/>
         </LinearLayout>
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="#40FFFFFF"/>
+        <TextView
+    android:layout_width="1dp"
+    android:layout_height="match_parent"
+    android:background="#40FFFFFF"
+    android:text="" />
 
         <LinearLayout
             android:layout_width="0dp"
