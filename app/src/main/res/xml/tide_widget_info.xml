@@ -1,6 +1,6 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="180dp"
-    android:minHeight="110dp"
+    android:minWidth="250dp"
+    android:minHeight="145dp"
     android:initialLayout="@layout/tide_widget"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"

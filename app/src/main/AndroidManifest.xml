@@ -3,16 +3,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
-        android:label="Marés de Natal"
+        android:label="DeuPraia!"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <receiver
             android:name=".TideWidgetProvider"
             android:exported="true"
-            android:label="Marés de Natal">
+            android:label="DeuPraia!">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="br.com.maresdenatal.REFRESH" />
+                <action android:name="br.com.deupraia.REFRESH" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
