@@ -24,36 +24,48 @@ class TideRefreshWorker(
     override suspend fun doWork(): Result {
         return try {
             val today = Calendar.getInstance()
+
             val tomorrow = (today.clone() as Calendar).apply {
                 add(Calendar.DAY_OF_MONTH, 1)
             }
 
             val harborCode = findNatalHarborCode()
 
-            // Busca dias vizinhos para classificar corretamente
-            // os eventos próximos à meia-noite.
-            val start = (today.clone() as Calendar).apply {
+            // Busca eventos de dias vizinhos para classificar
+            // corretamente as marés próximas à meia-noite.
+            val startDate = (today.clone() as Calendar).apply {
                 add(Calendar.DAY_OF_MONTH, -1)
             }
 
-            val end = (today.clone() as Calendar).apply {
+            val endDate = (today.clone() as Calendar).apply {
                 add(Calendar.DAY_OF_MONTH, 2)
             }
 
-            val events = mutableListOf<TideEvent>()
-            val cursor = start.clone() as Calendar
+            val allEvents = mutableListOf<TideEvent>()
+            val currentDate = startDate.clone() as Calendar
 
-            while (cursor.timeInMillis <= end.timeInMillis) {
-                events.addAll(fetchDayEvents(harborCode, cursor))
-                cursor.add(Calendar.DAY_OF_MONTH, 1)
+            while (
+                currentDate.get(Calendar.YEAR) < endDate.get(Calendar.YEAR) ||
+                (
+                    currentDate.get(Calendar.YEAR) ==
+                        endDate.get(Calendar.YEAR) &&
+                    currentDate.get(Calendar.DAY_OF_YEAR) <=
+                        endDate.get(Calendar.DAY_OF_YEAR)
+                )
+            ) {
+                allEvents.addAll(
+                    fetchDayEvents(harborCode, currentDate)
+                )
+
+                currentDate.add(Calendar.DAY_OF_MONTH, 1)
             }
 
-            val ordered = events
+            val orderedEvents = allEvents
                 .distinctBy { it.time.timeInMillis }
                 .sortedBy { it.time.timeInMillis }
 
-            val todayRows = formatDay(ordered, today)
-            val tomorrowRows = formatDay(ordered, tomorrow)
+            val todayRows = formatDay(orderedEvents, today)
+            val tomorrowRows = formatDay(orderedEvents, tomorrow)
 
             if (todayRows.isBlank() && tomorrowRows.isBlank()) {
                 error("A API não retornou eventos de maré válidos")
@@ -118,11 +130,11 @@ class TideRefreshWorker(
         val month = date.get(Calendar.MONTH) + 1
         val day = date.get(Calendar.DAY_OF_MONTH)
 
-        val url =
+        val address =
             "https://tabuamare.api.br/api/v2/tabua-mare/" +
-            "$code/$month/[$day]"
+                "$code/$month/[$day]"
 
-        val root = getJson(url)
+        val root = getJson(address)
         val data = root.optJSONArray("data")
             ?: error("Resposta da API sem campo data")
 
@@ -179,7 +191,10 @@ class TideRefreshWorker(
                         eventTime.set(Calendar.MILLISECOND, 0)
 
                         result.add(
-                            TideEvent(eventTime, level)
+                            TideEvent(
+                                time = eventTime,
+                                level = level
+                            )
                         )
                     }
                 }
@@ -198,45 +213,44 @@ class TideRefreshWorker(
 
         for (i in events.indices) {
             val event = events[i]
-
             val eventDate = event.time
-            if (
-                eventDate.get(Calendar.YEAR) != date.get(Calendar.YEAR) ||
-                eventDate.get(Calendar.DAY_OF_YEAR) !=
-                    date.get(Calendar.DAY_OF_YEAR)
-            ) {
-                continue
-            }
 
-            // Sem dois vizinhos não há como confirmar um máximo
-            // ou mínimo. Não inventamos uma classificação.
+            val sameDay =
+                eventDate.get(Calendar.YEAR) ==
+                    date.get(Calendar.YEAR) &&
+                eventDate.get(Calendar.DAY_OF_YEAR) ==
+                    date.get(Calendar.DAY_OF_YEAR)
+
+            if (!sameDay) continue
+
+            // Compara cada evento com o anterior e o seguinte.
             if (i == 0 || i == events.lastIndex) continue
 
-            val previous = events[i - 1].level
-            val next = events[i + 1].level
+            val previousLevel = events[i - 1].level
+            val nextLevel = events[i + 1].level
 
             val isHigh =
-                event.level > previous && event.level > next
+                event.level > previousLevel &&
+                event.level > nextLevel
 
             val isLow =
-                event.level < previous && event.level < next
+                event.level < previousLevel &&
+                event.level < nextLevel
 
             val marker: String
             val label: String
 
-    when {
-    isHigh -> {
-        marker = "⬆️"
-        label = "Alta"
-    }
+            when {
+                isHigh -> {
+                    marker = "⬆️"
+                    label = "Alta"
+                }
 
-    isLow -> {
-        marker = "⬇️"
-        label = "Baixa"
-    }
+                isLow -> {
+                    marker = "⬇️"
+                    label = "Baixa"
+                }
 
-    else -> continue
-}
                 else -> continue
             }
 
