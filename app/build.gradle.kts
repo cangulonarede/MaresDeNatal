@@ -3,10 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 android {
-    namespace = "br.com.deupraia"
+  namespace = "br.com.maresdenatal"
     compileSdk = 35
     defaultConfig {
-        applicationId = "br.com.deupraia"
+       applicationId = "br.com.maresdenatal"
         minSdk = 26
         targetSdk = 35
         versionCode = 2
